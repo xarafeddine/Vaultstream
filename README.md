@@ -7,24 +7,25 @@ A modern, secure private video vault built with Go, SQLite, and AWS S3. Upload, 
 ## ✨ Features
 
 - **Secure Video Storage** - Upload and stream videos with presigned URLs
-- **Thumbnail Generation** - Custom thumbnails for easy browsing
-- **Modern UI** - Premium glassmorphism dark theme with smooth animations
-- **JWT Authentication** - Secure user authentication with refresh tokens
+- **Advanced Authentication** - Secure JWT access tokens (15m expiry) with auto-rotating refresh tokens
+- **User Profiles** - Registration with full name support
+- **Password Reset** - Secure token-based password recovery flow
+- **Selective Deletion** - Option to delete only thumbnails or video files, or the entire record
+- **Robust Error Handling** - Expired URL detection with auto-refresh capabilities
+- **Modern UI** - Premium glassmorphism dark theme with separate viewer and editor modals
 - **S3 Integration** - Cloud storage with AWS S3 or local fallback
 - **Video Streaming** - HTTP Range requests for smooth playback
 - **Drag & Drop Upload** - Modern file upload experience
-- **Search & Filter** - Find videos by title or description
-- **Responsive Design** - Works on desktop and mobile
 
 ## 🛠️ Tech Stack
 
-| Component | Technology                        |
-| --------- | --------------------------------- |
-| Backend   | Go (standard library HTTP server) |
-| Database  | SQLite3                           |
-| Storage   | AWS S3 / Local filesystem         |
-| Auth      | JWT + Refresh tokens              |
-| Frontend  | Vanilla HTML, CSS, JavaScript     |
+| Component | Technology                         |
+| --------- | ---------------------------------- |
+| Backend   | Go (Standard Lib + Middleware)     |
+| Database  | SQLite3                            |
+| Storage   | AWS S3 / Local filesystem          |
+| Auth      | JWT (Short-lived) + Refresh Tokens |
+| Frontend  | Vanilla HTML, CSS, JavaScript      |
 
 ## 🚀 Quickstart
 
@@ -78,38 +79,51 @@ Open http://localhost:8091/app/ in your browser.
 ```
 vaultstream/
 ├── app/                    # Frontend assets
-│   ├── index.html         # Main HTML
+│   ├── index.html         # Main HTML (Modals, Forms)
 │   ├── styles.css         # Modern CSS with glassmorphism
-│   └── app.js             # JavaScript application
+│   └── app.js             # State management & UI logic
 ├── internal/
 │   ├── auth/              # JWT authentication
 │   ├── database/          # SQLite operations
 │   └── storage/           # S3/Local file storage
 ├── handler_*.go           # HTTP request handlers
+├── middleware.go          # Auth, Logger, CORS, Recovery
+├── routes.go              # Route registration
 ├── main.go                # Application entry point
 └── .env                   # Configuration
 ```
 
 ## 🔑 API Endpoints
 
-### Authentication
+### Authentication & Users
 
-| Method | Endpoint       | Description       |
-| ------ | -------------- | ----------------- |
-| `POST` | `/api/login`   | User login        |
-| `POST` | `/api/users`   | Create account    |
-| `POST` | `/api/refresh` | Refresh JWT token |
+| Method | Endpoint               | Description                                  |
+| ------ | ---------------------- | -------------------------------------------- |
+| `POST` | `/api/login`           | User login (returns Access + Refresh tokens) |
+| `POST` | `/api/users`           | Create account                               |
+| `POST` | `/api/refresh`         | Refresh access token                         |
+| `POST` | `/api/revoke`          | Revoke refresh token                         |
+| `POST` | `/api/forgot-password` | Request password reset token                 |
+| `POST` | `/api/reset-password`  | Reset password using token                   |
 
 ### Videos
 
-| Method   | Endpoint                    | Description        |
-| -------- | --------------------------- | ------------------ |
-| `GET`    | `/api/videos`               | List all videos    |
-| `GET`    | `/api/videos/:id`           | Get video details  |
-| `POST`   | `/api/videos`               | Create video draft |
-| `DELETE` | `/api/videos/:id`           | Delete video       |
-| `POST`   | `/api/video_upload/:id`     | Upload video file  |
-| `POST`   | `/api/thumbnail_upload/:id` | Upload thumbnail   |
+| Method   | Endpoint                     | Description              |
+| -------- | ---------------------------- | ------------------------ |
+| `GET`    | `/api/videos`                | List all videos          |
+| `GET`    | `/api/videos/:id`            | Get video details        |
+| `POST`   | `/api/videos`                | Create video draft       |
+| `PUT`    | `/api/videos/:id`            | Update video details     |
+| `DELETE` | `/api/videos/:id`            | Delete video (all files) |
+| `DELETE` | `/api/videos/:id/thumbnail`  | Delete thumbnail only    |
+| `DELETE` | `/api/videos/:id/video-file` | Delete video file only   |
+
+### Uploads
+
+| Method | Endpoint                    | Description       |
+| ------ | --------------------------- | ----------------- |
+| `POST` | `/api/video_upload/:id`     | Upload video file |
+| `POST` | `/api/thumbnail_upload/:id` | Upload thumbnail  |
 
 ## 🎨 Screenshots
 
@@ -117,7 +131,7 @@ vaultstream/
 
 ![Login](docs/screenshots/login.png)
 
-### Create Video Modal
+### Video Viewer & Editor
 
 ![Upload Modal](docs/screenshots/modal.png)
 

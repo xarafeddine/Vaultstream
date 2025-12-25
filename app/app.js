@@ -46,18 +46,25 @@ const elements = {
   // Modals
   modalNewVideo: document.getElementById("modal-new-video"),
   modalVideoDetail: document.getElementById("modal-video-detail"),
+  modalEditVideo: document.getElementById("modal-edit-video"),
 
   // Forms
   videoDraftForm: document.getElementById("video-draft-form"),
+  editVideoForm: document.getElementById("edit-video-form"),
 
   // Buttons
   btnNewVideo: document.getElementById("btn-new-video"),
   btnEmptyUpload: document.getElementById("btn-empty-upload"),
   btnNewCollection: document.getElementById("btn-new-collection"),
-  btnDeleteVideo: document.getElementById("btn-delete-video"),
-  btnDeleteThumbnail: document.getElementById("btn-delete-thumbnail"),
-  btnDeleteVideoFile: document.getElementById("btn-delete-video-file"),
+  btnVideoActions: document.getElementById("btn-video-actions"),
   fabUpload: document.getElementById("fab-upload"),
+
+  // Dropdown Items
+  dropdownDeleteThumbnail: document.getElementById("dropdown-delete-thumbnail"),
+  dropdownDeleteVideoFile: document.getElementById(
+    "dropdown-delete-video-file"
+  ),
+  dropdownDeleteAll: document.getElementById("dropdown-delete-all"),
 
   // Toast
   toastContainer: document.getElementById("toast-container"),
@@ -369,8 +376,53 @@ async function createVideoDraft() {
     await loadVideos();
     showToast("Video draft created!", "success");
 
-    // Open the new video for upload
-    openVideoDetail(data);
+    // Open the new video edit details immediately
+    state.currentVideo = data;
+    openEditModal();
+  } catch (error) {
+    showToast(error.message, "error");
+  }
+}
+
+async function updateVideoDetails() {
+  if (!state.currentVideo) return;
+
+  const title = document.getElementById("edit-video-title").value;
+  const description = document.getElementById("edit-video-description").value;
+
+  try {
+    const res = await authFetch(`/api/videos/${state.currentVideo.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title, description }),
+    });
+
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.error || "Failed to update video");
+    }
+
+    const updatedVideo = await res.json();
+    state.currentVideo = updatedVideo;
+
+    // Update local list
+    const index = state.videos.findIndex((v) => v.id === updatedVideo.id);
+    if (index !== -1) {
+      state.videos[index] = updatedVideo;
+    }
+
+    closeModal(elements.modalEditVideo);
+    renderVideos();
+
+    // If detail modal is open, update it
+    if (elements.modalVideoDetail.classList.contains("active")) {
+      updateVideoDetailModal(updatedVideo);
+    } else {
+      // Open detail modal if not open (edit flow finished)
+      openVideoDetail(updatedVideo);
+    }
+
+    showToast("Video updated successfully", "success");
   } catch (error) {
     showToast(error.message, "error");
   }
@@ -392,6 +444,7 @@ async function deleteVideo() {
     }
 
     closeModal(elements.modalVideoDetail);
+    closeModal(elements.modalEditVideo);
     await loadVideos();
     showToast("Video deleted", "success");
   } catch (error) {
@@ -402,12 +455,7 @@ async function deleteVideo() {
 async function deleteThumbnailOnly() {
   if (!state.currentVideo) return;
 
-  if (
-    !confirm(
-      "Delete only the thumbnail? The video metadata and file will remain."
-    )
-  )
-    return;
+  if (!confirm("Delete only the thumbnail?")) return;
 
   try {
     const res = await authFetch(
@@ -428,7 +476,14 @@ async function deleteThumbnailOnly() {
     const video = await getVideo(state.currentVideo.id);
     if (video) {
       state.currentVideo = video;
-      updateVideoDetailModal(video);
+      // Update both modals if open
+      if (elements.modalVideoDetail.classList.contains("active"))
+        updateVideoDetailModal(video);
+      // Re-populate edit modal if open
+      if (elements.modalEditVideo.classList.contains("active")) {
+        // No special update needed except global state?
+        // Actually we might want to refresh lists, but let's just refresh video list
+      }
       await loadVideos();
     }
   } catch (error) {
@@ -439,12 +494,7 @@ async function deleteThumbnailOnly() {
 async function deleteVideoFileOnly() {
   if (!state.currentVideo) return;
 
-  if (
-    !confirm(
-      "Delete only the video file? The metadata and thumbnail will remain."
-    )
-  )
-    return;
+  if (!confirm("Delete only the video file?")) return;
 
   try {
     const res = await authFetch(
@@ -465,7 +515,8 @@ async function deleteVideoFileOnly() {
     const video = await getVideo(state.currentVideo.id);
     if (video) {
       state.currentVideo = video;
-      updateVideoDetailModal(video);
+      if (elements.modalVideoDetail.classList.contains("active"))
+        updateVideoDetailModal(video);
       await loadVideos();
     }
   } catch (error) {
@@ -519,7 +570,7 @@ async function uploadThumbnail(videoId) {
     const video = await getVideo(videoId);
     if (video) {
       state.currentVideo = video;
-      updateVideoDetailModal(video);
+      // Note: we are usually in edit modal when uploading
       await loadVideos();
     }
   } catch (error) {
@@ -558,7 +609,6 @@ async function uploadVideo(videoId) {
     const video = await getVideo(videoId);
     if (video) {
       state.currentVideo = video;
-      updateVideoDetailModal(video);
       await loadVideos();
     }
   } catch (error) {
@@ -746,6 +796,21 @@ function openVideoDetail(video) {
   openModal(elements.modalVideoDetail);
 }
 
+function openEditModal() {
+  if (!state.currentVideo) return;
+
+  // Close detail modal if open
+  closeModal(elements.modalVideoDetail);
+
+  // Populate form
+  document.getElementById("edit-video-title").value = state.currentVideo.title;
+  document.getElementById("edit-video-description").value =
+    state.currentVideo.description || "";
+
+  // Open edit modal
+  openModal(elements.modalEditVideo);
+}
+
 function updateVideoDetailModal(video) {
   document.getElementById("detail-title").textContent = video.title;
   document.getElementById("detail-description").textContent =
@@ -772,6 +837,7 @@ function updateVideoDetailModal(video) {
   // Thumbnail with error handling
   const thumbnail = document.getElementById("detail-thumbnail");
   const thumbContainer = thumbnail.parentElement;
+  const noThumbText = document.getElementById("no-thumbnail-text");
 
   // Remove any existing overlay
   const existingThumbOverlay = thumbContainer.querySelector(".expired-overlay");
@@ -780,23 +846,38 @@ function updateVideoDetailModal(video) {
   if (video.thumbnail_url) {
     thumbnail.src = video.thumbnail_url;
     thumbnail.style.display = "block";
+    noThumbText.style.display = "none";
     thumbnail.onerror = () => handleMediaError(thumbnail, "image");
   } else {
     thumbnail.style.display = "none";
+    noThumbText.style.display = "block";
   }
 
-  // Update delete buttons visibility
-  const btnDeleteThumbnail = document.getElementById("btn-delete-thumbnail");
-  const btnDeleteVideoFile = document.getElementById("btn-delete-video-file");
+  // Update actions visibility in dropdown
+  updateActionsDropdown(video);
+}
 
-  if (btnDeleteThumbnail) {
-    btnDeleteThumbnail.style.display = video.thumbnail_url
-      ? "inline-flex"
-      : "none";
+function updateActionsDropdown(video) {
+  const btnThumb = elements.dropdownDeleteThumbnail;
+  const btnVideo = elements.dropdownDeleteVideoFile;
+
+  if (btnThumb) {
+    btnThumb.style.display = video.thumbnail_url ? "flex" : "none";
   }
-  if (btnDeleteVideoFile) {
-    btnDeleteVideoFile.style.display = video.video_url ? "inline-flex" : "none";
+  if (btnVideo) {
+    btnVideo.style.display = video.video_url ? "flex" : "none";
   }
+}
+
+function toggleVideoActionsDropdown() {
+  const dropdown = document.getElementById("video-actions-dropdown");
+  dropdown.classList.toggle("open");
+}
+
+function closeDropdowns() {
+  document
+    .querySelectorAll(".dropdown.open")
+    .forEach((d) => d.classList.remove("open"));
 }
 
 // ============================================
@@ -850,6 +931,12 @@ function setupEventListeners() {
     createVideoDraft();
   });
 
+  // Edit video form
+  elements.editVideoForm?.addEventListener("submit", (e) => {
+    e.preventDefault();
+    updateVideoDetails();
+  });
+
   // New video buttons
   elements.btnNewVideo?.addEventListener("click", () =>
     openModal(elements.modalNewVideo)
@@ -861,10 +948,25 @@ function setupEventListeners() {
     openModal(elements.modalNewVideo)
   );
 
-  // Delete buttons
-  elements.btnDeleteVideo?.addEventListener("click", deleteVideo);
-  elements.btnDeleteThumbnail?.addEventListener("click", deleteThumbnailOnly);
-  elements.btnDeleteVideoFile?.addEventListener("click", deleteVideoFileOnly);
+  // Toggle actions dropdown
+  elements.btnVideoActions?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    toggleVideoActionsDropdown();
+  });
+
+  // Close dropdowns when clicking outside
+  document.addEventListener("click", () => closeDropdowns());
+
+  // Dropdown actions
+  elements.dropdownDeleteAll?.addEventListener("click", deleteVideo);
+  elements.dropdownDeleteThumbnail?.addEventListener(
+    "click",
+    deleteThumbnailOnly
+  );
+  elements.dropdownDeleteVideoFile?.addEventListener(
+    "click",
+    deleteVideoFileOnly
+  );
 
   // Close modal buttons
   document.querySelectorAll("[data-close-modal]").forEach((btn) => {
@@ -921,6 +1023,7 @@ function setupEventListeners() {
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
       document.querySelectorAll(".modal-backdrop.active").forEach(closeModal);
+      closeDropdowns();
     }
 
     if ((e.ctrlKey || e.metaKey) && e.key === "k") {
@@ -1000,3 +1103,5 @@ window.showResetPasswordForm = showResetPasswordForm;
 window.refreshCurrentVideo = refreshCurrentVideo;
 window.deleteThumbnailOnly = deleteThumbnailOnly;
 window.deleteVideoFileOnly = deleteVideoFileOnly;
+window.openEditModal = openEditModal;
+window.toggleVideoActionsDropdown = toggleVideoActionsDropdown;
