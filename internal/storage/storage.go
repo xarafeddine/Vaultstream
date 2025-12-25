@@ -16,4 +16,7 @@ type FileStorage interface {
 	// For S3: uses AWS SDK presigning
 	// For Local: creates a signed token-based URL
 	GeneratePresignedURL(storageRef string, expireTime time.Duration) (string, error)
+
+	// DeleteFile removes a file from storage
+	DeleteFile(storageRef string) error
 }

@@ -111,13 +111,20 @@ func main() {
 
 	mux.HandleFunc("POST /api/users", cfg.handlerUsersCreate)
 
+	// Password reset
+	mux.HandleFunc("POST /api/forgot-password", cfg.handlerForgotPassword)
+	mux.HandleFunc("POST /api/reset-password", cfg.handlerResetPassword)
+
 	mux.HandleFunc("POST /api/videos", cfg.handlerVideoMetaCreate)
 	mux.HandleFunc("POST /api/thumbnail_upload/{videoID}", cfg.handlerUploadThumbnail)
 	mux.HandleFunc("POST /api/video_upload/{videoID}", cfg.handlerUploadVideo)
 	mux.HandleFunc("GET /api/videos", cfg.handlerVideosRetrieve)
 	mux.HandleFunc("GET /api/videos/{videoID}", cfg.handlerVideoGet)
-	// mux.HandleFunc("GET /api/thumbnails/{videoID}", cfg.handlerThumbnailGet)
 	mux.HandleFunc("DELETE /api/videos/{videoID}", cfg.handlerVideoMetaDelete)
+
+	// Selective deletion (delete only thumbnail or video file)
+	mux.HandleFunc("DELETE /api/videos/{videoID}/thumbnail", cfg.handlerDeleteThumbnail)
+	mux.HandleFunc("DELETE /api/videos/{videoID}/video-file", cfg.handlerDeleteVideoFile)
 
 	mux.HandleFunc("POST /admin/reset", cfg.handlerReset)
 

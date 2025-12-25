@@ -21,6 +21,7 @@
         <h1 class="auth-title">Vaultstream</h1>
         <p class="auth-subtitle">Your private video vault</p>
 
+        <!-- Login Form -->
         <form id="login-form" class="auth-form">
           <div class="form-group">
             <label class="form-label" for="email">Email</label>
@@ -44,8 +45,136 @@
           </div>
           <div class="auth-actions">
             <button type="submit" class="btn btn-primary">Login</button>
-            <button type="button" class="btn btn-secondary" onclick="signup()">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              onclick="showSignupForm()"
+            >
               Sign Up
+            </button>
+          </div>
+          <div class="text-center mt-md">
+            <a
+              href="#"
+              class="text-muted"
+              onclick="showForgotPasswordForm(); return false;"
+              >Forgot password?</a
+            >
+          </div>
+        </form>
+
+        <!-- Signup Form (hidden by default) -->
+        <form id="signup-form" class="auth-form hidden">
+          <div class="form-group">
+            <label class="form-label" for="signup-fullname">Full Name</label>
+            <input
+              class="form-input"
+              type="text"
+              id="signup-fullname"
+              placeholder="John Doe"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="signup-email">Email</label>
+            <input
+              class="form-input"
+              type="email"
+              id="signup-email"
+              placeholder="you@example.com"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="signup-password">Password</label>
+            <input
+              class="form-input"
+              type="password"
+              id="signup-password"
+              placeholder="At least 6 characters"
+              minlength="6"
+              required
+            />
+          </div>
+          <div class="auth-actions">
+            <button type="submit" class="btn btn-primary">
+              Create Account
+            </button>
+            <button
+              type="button"
+              class="btn btn-secondary"
+              onclick="showLoginForm()"
+            >
+              Back to Login
+            </button>
+          </div>
+        </form>
+
+        <!-- Forgot Password Form (hidden by default) -->
+        <form id="forgot-password-form" class="auth-form hidden">
+          <p class="text-muted mb-md">
+            Enter your email address and we'll send you a reset link.
+          </p>
+          <div class="form-group">
+            <label class="form-label" for="forgot-email">Email</label>
+            <input
+              class="form-input"
+              type="email"
+              id="forgot-email"
+              placeholder="you@example.com"
+              required
+            />
+          </div>
+          <div class="auth-actions">
+            <button type="submit" class="btn btn-primary">
+              Send Reset Link
+            </button>
+            <button
+              type="button"
+              class="btn btn-secondary"
+              onclick="showLoginForm()"
+            >
+              Back to Login
+            </button>
+          </div>
+        </form>
+
+        <!-- Reset Password Form (hidden by default) -->
+        <form id="reset-password-form" class="auth-form hidden">
+          <p class="text-muted mb-md">Enter your new password.</p>
+          <div class="form-group">
+            <label class="form-label" for="reset-token">Reset Token</label>
+            <input
+              class="form-input"
+              type="text"
+              id="reset-token"
+              placeholder="Paste your reset token"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="reset-new-password"
+              >New Password</label
+            >
+            <input
+              class="form-input"
+              type="password"
+              id="reset-new-password"
+              placeholder="At least 6 characters"
+              minlength="6"
+              required
+            />
+          </div>
+          <div class="auth-actions">
+            <button type="submit" class="btn btn-primary">
+              Reset Password
+            </button>
+            <button
+              type="button"
+              class="btn btn-secondary"
+              onclick="showLoginForm()"
+            >
+              Back to Login
             </button>
           </div>
         </form>
@@ -429,25 +558,47 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-danger" id="btn-delete-video">
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
+          <div class="flex gap-sm">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              id="btn-delete-thumbnail"
+              style="display: none"
+              title="Delete thumbnail only"
             >
-              <polyline points="3 6 5 6 21 6"></polyline>
-              <path
-                d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
-              ></path>
-            </svg>
-            Delete
-          </button>
-          <button type="button" class="btn btn-secondary" data-close-modal>
-            Close
-          </button>
+              🖼️ Delete Thumbnail
+            </button>
+            <button
+              type="button"
+              class="btn btn-secondary"
+              id="btn-delete-video-file"
+              style="display: none"
+              title="Delete video file only"
+            >
+              🎬 Delete Video
+            </button>
+          </div>
+          <div class="flex gap-sm">
+            <button type="button" class="btn btn-danger" id="btn-delete-video">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path
+                  d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+                ></path>
+              </svg>
+              Delete All
+            </button>
+            <button type="button" class="btn btn-secondary" data-close-modal>
+              Close
+            </button>
+          </div>
         </div>
       </div>
     </div>

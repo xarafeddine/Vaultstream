@@ -171,7 +171,7 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 
 func (cfg *apiConfig) dbVideoToSignedVideo(video database.Video) (database.Video, error) {
 	if video.VideoURL != nil {
-		presignedURL, err := cfg.storage.GeneratePresignedURL(*video.VideoURL, 1*time.Minute)
+		presignedURL, err := cfg.storage.GeneratePresignedURL(*video.VideoURL, 15*time.Minute)
 		if err != nil {
 			return database.Video{}, err
 		}
@@ -179,7 +179,7 @@ func (cfg *apiConfig) dbVideoToSignedVideo(video database.Video) (database.Video
 	}
 
 	if video.ThumbnailURL != nil {
-		presignedURL, err := cfg.storage.GeneratePresignedURL(*video.ThumbnailURL, 1*time.Minute)
+		presignedURL, err := cfg.storage.GeneratePresignedURL(*video.ThumbnailURL, 15*time.Minute)
 		if err != nil {
 			return database.Video{}, err
 		}

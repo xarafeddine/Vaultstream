@@ -103,3 +103,16 @@ func (s *LocalStorage) VerifyPresignedURL(key string, expiresStr, signature stri
 
 	return hmac.Equal([]byte(signature), []byte(expectedSignature))
 }
+
+// DeleteFile removes a file from local storage
+func (s *LocalStorage) DeleteFile(storageRef string) error {
+	// Parse storage reference "local,key"
+	parts := strings.SplitN(storageRef, ",", 2)
+	if len(parts) != 2 {
+		return fmt.Errorf("invalid storage reference: %s", storageRef)
+	}
+	key := parts[1]
+
+	filePath := filepath.Join(s.baseDir, key)
+	return os.Remove(filePath)
+}

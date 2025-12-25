@@ -32,13 +32,18 @@ func (c *Client) autoMigrate() error {
 		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 		updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 		password TEXT NOT NULL,
-		email TEXT UNIQUE NOT NULL
+		email TEXT UNIQUE NOT NULL,
+		full_name TEXT DEFAULT ''
 	);
 	`
 	_, err := c.db.Exec(userTable)
 	if err != nil {
 		return err
 	}
+
+	// Add full_name column if it doesn't exist (for existing databases)
+	_, _ = c.db.Exec("ALTER TABLE users ADD COLUMN full_name TEXT DEFAULT ''")
+
 	refreshTokenTable := `
 	CREATE TABLE IF NOT EXISTS refresh_tokens (
 		token TEXT PRIMARY KEY,
@@ -72,6 +77,23 @@ func (c *Client) autoMigrate() error {
 	if err != nil {
 		return err
 	}
+
+	// Password reset tokens table
+	passwordResetTable := `
+	CREATE TABLE IF NOT EXISTS password_reset_tokens (
+		token TEXT PRIMARY KEY,
+		user_id TEXT NOT NULL,
+		expires_at TIMESTAMP NOT NULL,
+		used_at TIMESTAMP,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+	);
+	`
+	_, err = c.db.Exec(passwordResetTable)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 

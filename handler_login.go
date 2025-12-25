@@ -47,7 +47,7 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 	accessToken, err := auth.MakeJWT(
 		user.ID,
 		cfg.jwtSecret,
-		time.Hour*24*30,
+		time.Minute*15, // Short-lived access token (15 minutes)
 	)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't create access JWT", err)

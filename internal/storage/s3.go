@@ -84,3 +84,20 @@ func (s *S3Storage) GeneratePresignedURL(storageRef string, expireTime time.Dura
 
 	return presignedReq.URL, nil
 }
+
+// DeleteFile removes a file from S3 storage
+func (s *S3Storage) DeleteFile(storageRef string) error {
+	// Parse storage reference "bucket,key"
+	parts := strings.SplitN(storageRef, ",", 2)
+	if len(parts) != 2 {
+		return fmt.Errorf("invalid storage reference: %s", storageRef)
+	}
+	bucket := parts[0]
+	key := parts[1]
+
+	_, err := s.client.DeleteObject(context.Background(), &s3.DeleteObjectInput{
+		Bucket: &bucket,
+		Key:    &key,
+	})
+	return err
+}

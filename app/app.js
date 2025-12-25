@@ -22,6 +22,12 @@ const elements = {
   authSection: document.getElementById("auth-section"),
   appSection: document.getElementById("app-section"),
 
+  // Auth Forms
+  loginForm: document.getElementById("login-form"),
+  signupForm: document.getElementById("signup-form"),
+  forgotPasswordForm: document.getElementById("forgot-password-form"),
+  resetPasswordForm: document.getElementById("reset-password-form"),
+
   // Navigation
   sidebar: document.getElementById("sidebar"),
   menuToggle: document.getElementById("menu-toggle"),
@@ -42,7 +48,6 @@ const elements = {
   modalVideoDetail: document.getElementById("modal-video-detail"),
 
   // Forms
-  loginForm: document.getElementById("login-form"),
   videoDraftForm: document.getElementById("video-draft-form"),
 
   // Buttons
@@ -50,6 +55,8 @@ const elements = {
   btnEmptyUpload: document.getElementById("btn-empty-upload"),
   btnNewCollection: document.getElementById("btn-new-collection"),
   btnDeleteVideo: document.getElementById("btn-delete-video"),
+  btnDeleteThumbnail: document.getElementById("btn-delete-thumbnail"),
+  btnDeleteVideoFile: document.getElementById("btn-delete-video-file"),
   fabUpload: document.getElementById("fab-upload"),
 
   // Toast
@@ -73,11 +80,42 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 
 // ============================================
+// Auth Form Toggling
+// ============================================
+function hideAllAuthForms() {
+  elements.loginForm?.classList.add("hidden");
+  elements.signupForm?.classList.add("hidden");
+  elements.forgotPasswordForm?.classList.add("hidden");
+  elements.resetPasswordForm?.classList.add("hidden");
+}
+
+function showLoginForm() {
+  hideAllAuthForms();
+  elements.loginForm?.classList.remove("hidden");
+}
+
+function showSignupForm() {
+  hideAllAuthForms();
+  elements.signupForm?.classList.remove("hidden");
+}
+
+function showForgotPasswordForm() {
+  hideAllAuthForms();
+  elements.forgotPasswordForm?.classList.remove("hidden");
+}
+
+function showResetPasswordForm() {
+  hideAllAuthForms();
+  elements.resetPasswordForm?.classList.remove("hidden");
+}
+
+// ============================================
 // Auth Functions
 // ============================================
 function showAuth() {
   elements.authSection.classList.remove("hidden");
   elements.appSection.classList.add("hidden");
+  showLoginForm();
 }
 
 function showApp() {
@@ -103,7 +141,11 @@ async function login() {
     }
 
     if (data.token) {
+      // Store both access and refresh tokens
       localStorage.setItem("token", data.token);
+      if (data.refresh_token) {
+        localStorage.setItem("refresh_token", data.refresh_token);
+      }
       showApp();
       await loadVideos();
       showToast("Welcome back!", "success");
@@ -114,14 +156,24 @@ async function login() {
 }
 
 async function signup() {
-  const email = document.getElementById("email").value;
-  const password = document.getElementById("password").value;
+  const fullName = document.getElementById("signup-fullname").value;
+  const email = document.getElementById("signup-email").value;
+  const password = document.getElementById("signup-password").value;
+
+  if (!fullName || !email || !password) {
+    showToast("Please fill in all fields", "error");
+    return;
+  }
 
   try {
     const res = await fetch("/api/users", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({
+        email,
+        password,
+        full_name: fullName,
+      }),
     });
 
     if (!res.ok) {
@@ -130,7 +182,74 @@ async function signup() {
     }
 
     showToast("Account created! Logging in...", "success");
+
+    // Copy values to login form and login
+    document.getElementById("email").value = email;
+    document.getElementById("password").value = password;
+    showLoginForm();
     await login();
+  } catch (error) {
+    showToast(error.message, "error");
+  }
+}
+
+async function forgotPassword() {
+  const email = document.getElementById("forgot-email").value;
+
+  if (!email) {
+    showToast("Please enter your email", "error");
+    return;
+  }
+
+  try {
+    const res = await fetch("/api/forgot-password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.error || "Failed to send reset link");
+    }
+
+    showToast(data.message, "success");
+
+    // For demo: if token is returned, pre-fill it
+    if (data.token) {
+      document.getElementById("reset-token").value = data.token;
+      showResetPasswordForm();
+    }
+  } catch (error) {
+    showToast(error.message, "error");
+  }
+}
+
+async function resetPassword() {
+  const token = document.getElementById("reset-token").value;
+  const newPassword = document.getElementById("reset-new-password").value;
+
+  if (!token || !newPassword) {
+    showToast("Please fill in all fields", "error");
+    return;
+  }
+
+  try {
+    const res = await fetch("/api/reset-password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token, new_password: newPassword }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.error || "Failed to reset password");
+    }
+
+    showToast(data.message, "success");
+    showLoginForm();
   } catch (error) {
     showToast(error.message, "error");
   }
@@ -138,6 +257,7 @@ async function signup() {
 
 function logout() {
   localStorage.removeItem("token");
+  localStorage.removeItem("refresh_token");
   state.videos = [];
   state.currentVideo = null;
   showAuth();
@@ -145,13 +265,71 @@ function logout() {
 }
 
 // ============================================
+// Token Refresh
+// ============================================
+async function refreshAccessToken() {
+  const refreshToken = localStorage.getItem("refresh_token");
+  if (!refreshToken) {
+    return false;
+  }
+
+  try {
+    const res = await fetch("/api/refresh", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${refreshToken}`,
+      },
+    });
+
+    if (!res.ok) {
+      throw new Error("Token refresh failed");
+    }
+
+    const data = await res.json();
+    if (data.token) {
+      localStorage.setItem("token", data.token);
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.error("Token refresh failed:", error);
+    return false;
+  }
+}
+
+// Wrapper for authenticated API calls with auto-refresh
+async function authFetch(url, options = {}) {
+  options.headers = options.headers || {};
+  options.headers["Authorization"] = `Bearer ${localStorage.getItem("token")}`;
+
+  let res = await fetch(url, options);
+
+  // If unauthorized, try to refresh token
+  if (res.status === 401) {
+    const refreshed = await refreshAccessToken();
+    if (refreshed) {
+      // Retry with new token
+      options.headers["Authorization"] = `Bearer ${localStorage.getItem(
+        "token"
+      )}`;
+      res = await fetch(url, options);
+    } else {
+      // Refresh failed, logout
+      logout();
+      showToast("Session expired. Please log in again.", "warning");
+      throw new Error("Session expired");
+    }
+  }
+
+  return res;
+}
+
+// ============================================
 // Video Functions
 // ============================================
 async function loadVideos() {
   try {
-    const res = await fetch("/api/videos", {
-      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-    });
+    const res = await authFetch("/api/videos");
 
     if (!res.ok) {
       throw new Error("Failed to load videos");
@@ -161,7 +339,9 @@ async function loadVideos() {
     renderVideos();
     updateStorageStats();
   } catch (error) {
-    showToast(error.message, "error");
+    if (error.message !== "Session expired") {
+      showToast(error.message, "error");
+    }
   }
 }
 
@@ -170,12 +350,9 @@ async function createVideoDraft() {
   const description = document.getElementById("video-description").value;
 
   try {
-    const res = await fetch("/api/videos", {
+    const res = await authFetch("/api/videos", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${localStorage.getItem("token")}`,
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ title, description }),
     });
 
@@ -202,12 +379,12 @@ async function createVideoDraft() {
 async function deleteVideo() {
   if (!state.currentVideo) return;
 
-  if (!confirm("Are you sure you want to delete this video?")) return;
+  if (!confirm("Are you sure you want to delete this video and all its files?"))
+    return;
 
   try {
-    const res = await fetch(`/api/videos/${state.currentVideo.id}`, {
+    const res = await authFetch(`/api/videos/${state.currentVideo.id}`, {
       method: "DELETE",
-      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
     });
 
     if (!res.ok) {
@@ -222,11 +399,83 @@ async function deleteVideo() {
   }
 }
 
+async function deleteThumbnailOnly() {
+  if (!state.currentVideo) return;
+
+  if (
+    !confirm(
+      "Delete only the thumbnail? The video metadata and file will remain."
+    )
+  )
+    return;
+
+  try {
+    const res = await authFetch(
+      `/api/videos/${state.currentVideo.id}/thumbnail`,
+      {
+        method: "DELETE",
+      }
+    );
+
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.error || "Failed to delete thumbnail");
+    }
+
+    showToast("Thumbnail deleted", "success");
+
+    // Refresh video data
+    const video = await getVideo(state.currentVideo.id);
+    if (video) {
+      state.currentVideo = video;
+      updateVideoDetailModal(video);
+      await loadVideos();
+    }
+  } catch (error) {
+    showToast(error.message, "error");
+  }
+}
+
+async function deleteVideoFileOnly() {
+  if (!state.currentVideo) return;
+
+  if (
+    !confirm(
+      "Delete only the video file? The metadata and thumbnail will remain."
+    )
+  )
+    return;
+
+  try {
+    const res = await authFetch(
+      `/api/videos/${state.currentVideo.id}/video-file`,
+      {
+        method: "DELETE",
+      }
+    );
+
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.error || "Failed to delete video file");
+    }
+
+    showToast("Video file deleted", "success");
+
+    // Refresh video data
+    const video = await getVideo(state.currentVideo.id);
+    if (video) {
+      state.currentVideo = video;
+      updateVideoDetailModal(video);
+      await loadVideos();
+    }
+  } catch (error) {
+    showToast(error.message, "error");
+  }
+}
+
 async function getVideo(videoId) {
   try {
-    const res = await fetch(`/api/videos/${videoId}`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-    });
+    const res = await authFetch(`/api/videos/${videoId}`);
 
     if (!res.ok) {
       throw new Error("Failed to get video");
@@ -254,9 +503,8 @@ async function uploadThumbnail(videoId) {
   progressContainer.classList.remove("hidden");
 
   try {
-    const res = await fetch(`/api/thumbnail_upload/${videoId}`, {
+    const res = await authFetch(`/api/thumbnail_upload/${videoId}`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       body: formData,
     });
 
@@ -294,9 +542,8 @@ async function uploadVideo(videoId) {
   progressContainer.classList.remove("hidden");
 
   try {
-    const res = await fetch(`/api/video_upload/${videoId}`, {
+    const res = await authFetch(`/api/video_upload/${videoId}`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       body: formData,
     });
 
@@ -319,6 +566,44 @@ async function uploadVideo(videoId) {
   } finally {
     progressContainer.classList.add("hidden");
     fileInput.value = "";
+  }
+}
+
+// ============================================
+// Expired URL Handling
+// ============================================
+function handleMediaError(element, type) {
+  const parent = element.parentElement;
+
+  // Create expired overlay
+  const overlay = document.createElement("div");
+  overlay.className = "expired-overlay";
+  overlay.innerHTML = `
+    <div class="expired-content">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"></circle>
+        <polyline points="12 6 12 12 16 14"></polyline>
+      </svg>
+      <p>${type === "video" ? "Video" : "Image"} URL expired</p>
+      <button class="btn btn-primary btn-sm" onclick="refreshCurrentVideo()">
+        Refresh
+      </button>
+    </div>
+  `;
+
+  element.style.display = "none";
+  parent.appendChild(overlay);
+}
+
+async function refreshCurrentVideo() {
+  if (!state.currentVideo) return;
+
+  showToast("Refreshing...", "info");
+  const video = await getVideo(state.currentVideo.id);
+  if (video) {
+    state.currentVideo = video;
+    updateVideoDetailModal(video);
+    showToast("Refreshed!", "success");
   }
 }
 
@@ -349,11 +634,32 @@ function renderVideos() {
       if (video) openVideoDetail(video);
     });
   });
+
+  // Add error handlers for thumbnails
+  elements.videoGrid
+    .querySelectorAll(".video-card-thumbnail img")
+    .forEach((img) => {
+      img.addEventListener("error", () => {
+        img.style.display = "none";
+        img.parentElement.innerHTML = `
+        <div class="video-card-no-thumbnail">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
+            <line x1="7" y1="2" x2="7" y2="22"></line>
+            <line x1="17" y1="2" x2="17" y2="22"></line>
+            <line x1="2" y1="12" x2="22" y2="12"></line>
+          </svg>
+        </div>
+      `;
+      });
+    });
 }
 
 function createVideoCard(video) {
   const thumbnailHtml = video.thumbnail_url
-    ? `<img src="${video.thumbnail_url}" alt="${escapeHtml(video.title)}" />`
+    ? `<img src="${video.thumbnail_url}" alt="${escapeHtml(
+        video.title
+      )}" onerror="this.style.display='none'" />`
     : `<div class="video-card-no-thumbnail">
         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
           <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
@@ -412,14 +718,11 @@ function filterVideos() {
 }
 
 function updateStorageStats() {
-  // For now, just show video count
-  // In future, this will show actual storage used
   const videoCount = state.videos.length;
   elements.storageText.textContent = `${videoCount} video${
     videoCount !== 1 ? "s" : ""
   } stored`;
 
-  // Placeholder progress (10% per video, max 100%)
   const percentage = Math.min(videoCount * 10, 100);
   elements.storageFill.style.width = `${percentage}%`;
 }
@@ -448,24 +751,51 @@ function updateVideoDetailModal(video) {
   document.getElementById("detail-description").textContent =
     video.description || "No description";
 
-  // Video player
+  // Video player with error handling
   const videoPlayer = document.getElementById("detail-video-player");
+  const videoContainer = videoPlayer.parentElement;
+
+  // Remove any existing overlay
+  const existingOverlay = videoContainer.querySelector(".expired-overlay");
+  if (existingOverlay) existingOverlay.remove();
+
   if (video.video_url) {
     videoPlayer.src = video.video_url;
     videoPlayer.style.display = "block";
+    videoPlayer.onerror = () => handleMediaError(videoPlayer, "video");
     videoPlayer.load();
   } else {
     videoPlayer.src = "";
     videoPlayer.style.display = "none";
   }
 
-  // Thumbnail
+  // Thumbnail with error handling
   const thumbnail = document.getElementById("detail-thumbnail");
+  const thumbContainer = thumbnail.parentElement;
+
+  // Remove any existing overlay
+  const existingThumbOverlay = thumbContainer.querySelector(".expired-overlay");
+  if (existingThumbOverlay) existingThumbOverlay.remove();
+
   if (video.thumbnail_url) {
     thumbnail.src = video.thumbnail_url;
     thumbnail.style.display = "block";
+    thumbnail.onerror = () => handleMediaError(thumbnail, "image");
   } else {
     thumbnail.style.display = "none";
+  }
+
+  // Update delete buttons visibility
+  const btnDeleteThumbnail = document.getElementById("btn-delete-thumbnail");
+  const btnDeleteVideoFile = document.getElementById("btn-delete-video-file");
+
+  if (btnDeleteThumbnail) {
+    btnDeleteThumbnail.style.display = video.thumbnail_url
+      ? "inline-flex"
+      : "none";
+  }
+  if (btnDeleteVideoFile) {
+    btnDeleteVideoFile.style.display = video.video_url ? "inline-flex" : "none";
   }
 }
 
@@ -475,13 +805,10 @@ function updateVideoDetailModal(video) {
 function showToast(message, type = "info") {
   const toast = document.createElement("div");
   toast.className = `toast ${type}`;
-  toast.innerHTML = `
-    <span>${escapeHtml(message)}</span>
-  `;
+  toast.innerHTML = `<span>${escapeHtml(message)}</span>`;
 
   elements.toastContainer.appendChild(toast);
 
-  // Auto remove after 4 seconds
   setTimeout(() => {
     toast.style.opacity = "0";
     toast.style.transform = "translateY(20px)";
@@ -494,30 +821,50 @@ function showToast(message, type = "info") {
 // ============================================
 function setupEventListeners() {
   // Login form
-  elements.loginForm.addEventListener("submit", (e) => {
+  elements.loginForm?.addEventListener("submit", (e) => {
     e.preventDefault();
     login();
   });
 
+  // Signup form
+  elements.signupForm?.addEventListener("submit", (e) => {
+    e.preventDefault();
+    signup();
+  });
+
+  // Forgot password form
+  elements.forgotPasswordForm?.addEventListener("submit", (e) => {
+    e.preventDefault();
+    forgotPassword();
+  });
+
+  // Reset password form
+  elements.resetPasswordForm?.addEventListener("submit", (e) => {
+    e.preventDefault();
+    resetPassword();
+  });
+
   // Video draft form
-  elements.videoDraftForm.addEventListener("submit", (e) => {
+  elements.videoDraftForm?.addEventListener("submit", (e) => {
     e.preventDefault();
     createVideoDraft();
   });
 
   // New video buttons
-  elements.btnNewVideo.addEventListener("click", () =>
+  elements.btnNewVideo?.addEventListener("click", () =>
     openModal(elements.modalNewVideo)
   );
-  elements.btnEmptyUpload.addEventListener("click", () =>
+  elements.btnEmptyUpload?.addEventListener("click", () =>
     openModal(elements.modalNewVideo)
   );
-  elements.fabUpload.addEventListener("click", () =>
+  elements.fabUpload?.addEventListener("click", () =>
     openModal(elements.modalNewVideo)
   );
 
-  // Delete video
-  elements.btnDeleteVideo.addEventListener("click", deleteVideo);
+  // Delete buttons
+  elements.btnDeleteVideo?.addEventListener("click", deleteVideo);
+  elements.btnDeleteThumbnail?.addEventListener("click", deleteThumbnailOnly);
+  elements.btnDeleteVideoFile?.addEventListener("click", deleteVideoFileOnly);
 
   // Close modal buttons
   document.querySelectorAll("[data-close-modal]").forEach((btn) => {
@@ -535,7 +882,7 @@ function setupEventListeners() {
   });
 
   // Search
-  elements.searchInput.addEventListener(
+  elements.searchInput?.addEventListener(
     "input",
     debounce((e) => {
       state.searchQuery = e.target.value;
@@ -544,7 +891,7 @@ function setupEventListeners() {
   );
 
   // Sidebar toggle (mobile)
-  elements.menuToggle.addEventListener("click", () => {
+  elements.menuToggle?.addEventListener("click", () => {
     elements.sidebar.classList.toggle("open");
   });
 
@@ -572,15 +919,13 @@ function setupEventListeners() {
 
   // Keyboard shortcuts
   document.addEventListener("keydown", (e) => {
-    // Escape to close modals
     if (e.key === "Escape") {
       document.querySelectorAll(".modal-backdrop.active").forEach(closeModal);
     }
 
-    // Ctrl/Cmd + K to focus search
     if ((e.ctrlKey || e.metaKey) && e.key === "k") {
       e.preventDefault();
-      elements.searchInput.focus();
+      elements.searchInput?.focus();
     }
   });
 }
@@ -591,10 +936,8 @@ function setupDropzone(dropzoneId, inputId, onFileSelect) {
 
   if (!dropzone || !input) return;
 
-  // File input change
   input.addEventListener("change", onFileSelect);
 
-  // Drag and drop
   ["dragenter", "dragover"].forEach((event) => {
     dropzone.addEventListener(event, (e) => {
       e.preventDefault();
@@ -650,3 +993,10 @@ function formatBytes(bytes) {
 // Make functions available globally for onclick handlers
 window.logout = logout;
 window.signup = signup;
+window.showLoginForm = showLoginForm;
+window.showSignupForm = showSignupForm;
+window.showForgotPasswordForm = showForgotPasswordForm;
+window.showResetPasswordForm = showResetPasswordForm;
+window.refreshCurrentVideo = refreshCurrentVideo;
+window.deleteThumbnailOnly = deleteThumbnailOnly;
+window.deleteVideoFileOnly = deleteVideoFileOnly;
