@@ -1,0 +1,9 @@
+out
+*.db
+.env
+assets/
+samples/
+
+# Docker & Air (hot-reload)
+tmp/
+*.log

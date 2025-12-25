@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Vaultstream - Your private video vault. Securely store, organize, and share your videos."
+    />
+    <title>Vaultstream - Private Video Vault</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <!-- ============================================
+         Auth Section (Login/Signup)
+         ============================================ -->
+    <div id="auth-section" class="auth-container">
+      <div class="auth-card">
+        <div class="auth-logo">V</div>
+        <h1 class="auth-title">Vaultstream</h1>
+        <p class="auth-subtitle">Your private video vault</p>
+
+        <form id="login-form" class="auth-form">
+          <div class="form-group">
+            <label class="form-label" for="email">Email</label>
+            <input
+              class="form-input"
+              type="email"
+              id="email"
+              placeholder="you@example.com"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="password">Password</label>
+            <input
+              class="form-input"
+              type="password"
+              id="password"
+              placeholder="••••••••"
+              required
+            />
+          </div>
+          <div class="auth-actions">
+            <button type="submit" class="btn btn-primary">Login</button>
+            <button type="button" class="btn btn-secondary" onclick="signup()">
+              Sign Up
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- ============================================
+         Main App Section
+         ============================================ -->
+    <div id="app-section" class="hidden">
+      <!-- Navbar -->
+      <nav class="navbar">
+        <div class="navbar-brand">
+          <div class="navbar-logo">V</div>
+          <div>
+            <div class="navbar-title">Vaultstream</div>
+            <div class="navbar-subtitle">Private Video Vault</div>
+          </div>
+        </div>
+
+        <div class="search-container">
+          <svg
+            class="search-icon"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <circle cx="11" cy="11" r="8"></circle>
+            <path d="m21 21-4.35-4.35"></path>
+          </svg>
+          <input
+            type="text"
+            class="search-input"
+            id="search-input"
+            placeholder="Search videos..."
+          />
+        </div>
+
+        <div class="navbar-actions">
+          <button
+            class="btn btn-ghost btn-icon"
+            id="menu-toggle"
+            title="Toggle Menu"
+          >
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <line x1="3" y1="12" x2="21" y2="12"></line>
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+          </button>
+          <button class="btn btn-ghost" onclick="logout()">
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+              <polyline points="16 17 21 12 16 7"></polyline>
+              <line x1="21" y1="12" x2="9" y2="12"></line>
+            </svg>
+            Logout
+          </button>
+        </div>
+      </nav>
+
+      <!-- Sidebar -->
+      <aside class="sidebar" id="sidebar">
+        <div class="sidebar-section">
+          <h3 class="sidebar-section-title">Library</h3>
+          <ul class="sidebar-nav">
+            <li class="sidebar-nav-item">
+              <a class="sidebar-nav-link active" data-view="all">
+                <svg
+                  class="sidebar-nav-icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <rect
+                    x="2"
+                    y="2"
+                    width="20"
+                    height="20"
+                    rx="2.18"
+                    ry="2.18"
+                  ></rect>
+                  <line x1="7" y1="2" x2="7" y2="22"></line>
+                  <line x1="17" y1="2" x2="17" y2="22"></line>
+                  <line x1="2" y1="12" x2="22" y2="12"></line>
+                </svg>
+                All Videos
+              </a>
+            </li>
+            <li class="sidebar-nav-item">
+              <a class="sidebar-nav-link" data-view="recent">
+                <svg
+                  class="sidebar-nav-icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+                Recent
+              </a>
+            </li>
+          </ul>
+        </div>
+
+        <div class="sidebar-section">
+          <h3 class="sidebar-section-title">Collections</h3>
+          <ul class="sidebar-nav" id="collections-list">
+            <!-- Collections will be rendered here -->
+          </ul>
+          <button
+            class="btn btn-ghost"
+            id="btn-new-collection"
+            style="width: 100%; margin-top: 8px"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            New Collection
+          </button>
+        </div>
+
+        <div class="sidebar-section">
+          <h3 class="sidebar-section-title">Storage</h3>
+          <div class="storage-stats">
+            <div class="storage-label">Used Storage</div>
+            <div class="storage-bar">
+              <div
+                class="storage-bar-fill"
+                id="storage-fill"
+                style="width: 0%"
+              ></div>
+            </div>
+            <div class="storage-text" id="storage-text">0 MB used</div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Main Content -->
+      <main class="main-content" id="main-content">
+        <!-- Page Header -->
+        <div class="page-header">
+          <h1 class="page-title" id="page-title">All Videos</h1>
+          <button class="btn btn-primary" id="btn-new-video">
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            New Video
+          </button>
+        </div>
+
+        <!-- Video Grid -->
+        <div class="video-grid" id="video-grid">
+          <!-- Video cards will be rendered here -->
+        </div>
+
+        <!-- Empty State -->
+        <div class="empty-state hidden" id="empty-state">
+          <div class="empty-state-icon">📹</div>
+          <h3 class="empty-state-title">No videos yet</h3>
+          <p class="empty-state-text">Upload your first video to get started</p>
+          <button class="btn btn-primary" id="btn-empty-upload">
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="17 8 12 3 7 8"></polyline>
+              <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+            Upload Video
+          </button>
+        </div>
+      </main>
+
+      <!-- FAB -->
+      <button class="fab hidden" id="fab-upload" title="Upload">
+        <svg
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+      </button>
+    </div>
+
+    <!-- ============================================
+         Modal: New Video
+         ============================================ -->
+    <div class="modal-backdrop" id="modal-new-video">
+      <div class="modal">
+        <div class="modal-header">
+          <h2 class="modal-title">Create New Video</h2>
+          <button class="modal-close" data-close-modal>
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+        <form id="video-draft-form">
+          <div class="modal-body">
+            <div class="form-group">
+              <label class="form-label" for="video-title">Title</label>
+              <input
+                class="form-input"
+                type="text"
+                id="video-title"
+                placeholder="Enter video title"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="video-description"
+                >Description</label
+              >
+              <textarea
+                class="form-textarea"
+                id="video-description"
+                placeholder="Describe your video..."
+              ></textarea>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-close-modal>
+              Cancel
+            </button>
+            <button type="submit" class="btn btn-primary">Create Draft</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- ============================================
+         Modal: Video Detail
+         ============================================ -->
+    <div class="modal-backdrop" id="modal-video-detail">
+      <div class="modal" style="max-width: 800px">
+        <div class="modal-header">
+          <h2 class="modal-title" id="detail-title">Video Title</h2>
+          <button class="modal-close" data-close-modal>
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+        <div class="modal-body" style="padding: 0">
+          <!-- Video Player -->
+          <div class="video-detail-player">
+            <video id="detail-video-player" controls></video>
+          </div>
+
+          <div style="padding: var(--spacing-lg)">
+            <!-- Thumbnail Preview -->
+            <div
+              id="detail-thumbnail-container"
+              style="margin-bottom: var(--spacing-lg)"
+            >
+              <img
+                id="detail-thumbnail"
+                style="
+                  max-width: 200px;
+                  border-radius: var(--radius-md);
+                  display: none;
+                "
+              />
+            </div>
+
+            <p
+              id="detail-description"
+              class="text-muted"
+              style="margin-bottom: var(--spacing-lg)"
+            ></p>
+
+            <!-- Upload Forms -->
+            <div
+              style="
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: var(--spacing-lg);
+              "
+            >
+              <!-- Thumbnail Upload -->
+              <div>
+                <h4 style="margin-bottom: var(--spacing-sm)">
+                  Update Thumbnail
+                </h4>
+                <div class="file-input-wrapper" id="thumbnail-dropzone">
+                  <input type="file" id="thumbnail-input" accept="image/*" />
+                  <div class="file-input-icon">🖼️</div>
+                  <div class="file-input-text">
+                    <strong>Click to upload</strong> or drag and drop
+                  </div>
+                </div>
+                <div class="upload-progress hidden" id="thumbnail-progress">
+                  <div class="upload-progress-bar">
+                    <div class="upload-progress-fill" style="width: 0%"></div>
+                  </div>
+                  <div class="upload-progress-text">Uploading...</div>
+                </div>
+              </div>
+
+              <!-- Video Upload -->
+              <div>
+                <h4 style="margin-bottom: var(--spacing-sm)">Update Video</h4>
+                <div class="file-input-wrapper" id="video-dropzone">
+                  <input type="file" id="video-input" accept="video/*" />
+                  <div class="file-input-icon">🎬</div>
+                  <div class="file-input-text">
+                    <strong>Click to upload</strong> or drag and drop
+                  </div>
+                </div>
+                <div class="upload-progress hidden" id="video-progress">
+                  <div class="upload-progress-bar">
+                    <div class="upload-progress-fill" style="width: 0%"></div>
+                  </div>
+                  <div class="upload-progress-text">Uploading...</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-danger" id="btn-delete-video">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path
+                d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+              ></path>
+            </svg>
+            Delete
+          </button>
+          <button type="button" class="btn btn-secondary" data-close-modal>
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toast-container"></div>
+  </body>
+</html>
