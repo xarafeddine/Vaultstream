@@ -18,10 +18,14 @@ func (cfg *apiConfig) handlerServeAssets(w http.ResponseWriter, r *http.Request)
 	filePath := strings.TrimPrefix(urlPath, "/assets/")
 
 	// Security: prevent directory traversal attacks
-	if strings.Contains(filePath, "..") {
+	cleanPath := filepath.Clean(filePath)
+	// Ensure the path doesn't try to navigate up
+	if strings.Contains(cleanPath, "..") || strings.HasPrefix(cleanPath, "/") || strings.HasPrefix(cleanPath, "\\") {
 		respondWithError(w, http.StatusBadRequest, "Invalid path", nil)
 		return
 	}
+	// Use the cleaned path
+	filePath = cleanPath
 
 	// Verify local presigned URL signature
 	if localStorage, ok := cfg.storage.(*storage.LocalStorage); ok {

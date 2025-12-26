@@ -545,7 +545,26 @@ async function getVideo(videoId) {
 async function uploadThumbnail(videoId) {
   const fileInput = document.getElementById("thumbnail-input");
   const file = fileInput.files[0];
-  if (!file) return;
+
+  if (!file) {
+    showToast("Please select a thumbnail image to upload", "warning");
+    return;
+  }
+
+  // Client-side validation for Thumbnails
+  const allowedTypes = ["image/jpeg", "image/png"];
+  if (!allowedTypes.includes(file.type)) {
+    showToast("Invalid file type. Please upload a JPEG or PNG image.", "error");
+    fileInput.value = ""; // Clear invalid selection
+    return;
+  }
+
+  const maxSize = 10 * 1024 * 1024; // 10MB limit
+  if (file.size > maxSize) {
+    showToast("File too large. Maximum thumbnail size is 10MB.", "error");
+    fileInput.value = "";
+    return;
+  }
 
   const formData = new FormData();
   formData.append("thumbnail", file);
@@ -584,7 +603,28 @@ async function uploadThumbnail(videoId) {
 async function uploadVideo(videoId) {
   const fileInput = document.getElementById("video-input");
   const file = fileInput.files[0];
-  if (!file) return;
+
+  if (!file) {
+    showToast("Please select a video file to upload", "warning");
+    return;
+  }
+
+  // Client-side validation for Videos
+  if (file.type !== "video/mp4") {
+    showToast(
+      "Invalid format. Only MP4 videos are supported for now.",
+      "error"
+    );
+    fileInput.value = ""; // Clear invalid selection
+    return;
+  }
+
+  const maxSize = 1024 * 1024 * 1024; // 1GB limit
+  if (file.size > maxSize) {
+    showToast("File too large. Maximum video size is 1GB.", "error");
+    fileInput.value = "";
+    return;
+  }
 
   const formData = new FormData();
   formData.append("video", file);
